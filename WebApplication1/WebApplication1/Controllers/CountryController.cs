@@ -10,6 +10,9 @@ namespace WebApplication1.Controllers
 {
     public class CountryController : ApiController
     {
+        const string TESTIMAGE_CLEAR = "DRSIMGUPLV_1_E5N75GCP-9HHX-9OFJ-UE4B-HS6L9C2FEC5B_20140706161919_1_EMP_14395.PNG";
+        const string TESTIMAGE_OBFUSCATED = "FF85307A-FC09-4345-8048-78721FF0B526.GIF";
+
         List<Country> Countries { get; set; }
 
         CountryController() {
@@ -286,6 +289,25 @@ namespace WebApplication1.Controllers
                 }
             }
             return Request.CreateResponse((HttpStatusCode)200, lstOut);
+        }
+        // GET: api/country/imagetest
+        [System.Web.Http.Route("api/country/imagetest")]
+        [System.Web.Http.HttpGet]
+        public HttpResponseMessage ImageTest()
+        {
+            var testGif = System.Web.Hosting.HostingEnvironment.MapPath("~/App_Data/TestImages/" + TESTIMAGE_OBFUSCATED);
+            //
+            var info = new ImageMagick.MagickImageInfo(testGif);
+            //
+            System.Diagnostics.Debug.WriteLine(info.Width);
+            System.Diagnostics.Debug.WriteLine(info.Height);
+            System.Diagnostics.Debug.WriteLine(info.ColorSpace);
+            System.Diagnostics.Debug.WriteLine(info.Format);
+            System.Diagnostics.Debug.WriteLine(info.Density.X);
+            System.Diagnostics.Debug.WriteLine(info.Density.Y);
+            System.Diagnostics.Debug.WriteLine(info.Density.Units);
+
+            return Request.CreateResponse((HttpStatusCode)200, "OK");
         }
     }
 }
