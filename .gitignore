@@ -1,3 +1,7 @@
+#SHEARICHARD start
+**/App_Data/TestImages/*.PNG
+**/App_Data/TestImages/*.GIF
+#SHEARICHARD end
 # The following command works for downloading when using Git for Windows:
 # curl -LOf http://gist.githubusercontent.com/kmorcinek/2710267/raw/.gitignore
 #
@@ -223,3 +227,5 @@ project.lock.json
 #####
 # End of core ignore list, below put you custom 'per project' settings (patterns or path)
 #####
+*.PNG
+*.GIF
