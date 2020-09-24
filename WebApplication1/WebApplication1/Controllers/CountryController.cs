@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
@@ -295,17 +296,30 @@ namespace WebApplication1.Controllers
         [System.Web.Http.HttpGet]
         public HttpResponseMessage ImageTest()
         {
-            var testGif = System.Web.Hosting.HostingEnvironment.MapPath("~/App_Data/TestImages/" + TESTIMAGE_OBFUSCATED);
+            var pathOfInputGif = System.Web.Hosting.HostingEnvironment.MapPath("~/App_Data/TestImages/" + TESTIMAGE_OBFUSCATED);
             //
-            var info = new ImageMagick.MagickImageInfo(testGif);
+            var infoOnInputGif = new ImageMagick.MagickImageInfo(pathOfInputGif);
             //
-            System.Diagnostics.Debug.WriteLine(info.Width);
-            System.Diagnostics.Debug.WriteLine(info.Height);
-            System.Diagnostics.Debug.WriteLine(info.ColorSpace);
-            System.Diagnostics.Debug.WriteLine(info.Format);
-            System.Diagnostics.Debug.WriteLine(info.Density.X);
-            System.Diagnostics.Debug.WriteLine(info.Density.Y);
-            System.Diagnostics.Debug.WriteLine(info.Density.Units);
+            System.Diagnostics.Debug.WriteLine(infoOnInputGif.Width);
+            System.Diagnostics.Debug.WriteLine(infoOnInputGif.Height);
+            System.Diagnostics.Debug.WriteLine(infoOnInputGif.ColorSpace);
+            System.Diagnostics.Debug.WriteLine(infoOnInputGif.Format);
+            System.Diagnostics.Debug.WriteLine(infoOnInputGif.Density.X);
+            System.Diagnostics.Debug.WriteLine(infoOnInputGif.Density.Y);
+            System.Diagnostics.Debug.WriteLine(infoOnInputGif.Density.Units);
+            //
+            string nameOfOutputGif = "TEMP-TEST-OUTPUT-" + System.Guid.NewGuid().ToString().ToUpper() + "-ORIGINAL-NAME-STARTS-" + TESTIMAGE_OBFUSCATED;
+            string pathOfOutputGif = Path.Combine(Path.GetTempPath(), nameOfOutputGif);
+                
+               // IO.Path(System.IO.GetTempPath() 
+            //
+            System.Diagnostics.Debug.WriteLine(String.Format("About to write copy of {0} to {1}", pathOfInputGif, pathOfOutputGif));
+            //
+            using (var image = new ImageMagick.MagickImage(pathOfInputGif))
+            {
+                // Save frame as jpg
+                image.Write(pathOfOutputGif);
+            }
 
             return Request.CreateResponse((HttpStatusCode)200, "OK");
         }
