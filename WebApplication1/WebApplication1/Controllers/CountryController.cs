@@ -6,6 +6,7 @@ using System.Net;
 using System.Net.Http;
 using System.Web.Http;
 using WebApplication1.Models;
+using ImageMagick;
 
 namespace WebApplication1.Controllers
 {
@@ -13,6 +14,8 @@ namespace WebApplication1.Controllers
     {
         const string TESTIMAGE_CLEAR = "DRSIMGUPLV_1_E5N75GCP-9HHX-9OFJ-UE4B-HS6L9C2FEC5B_20140706161919_1_EMP_14395.PNG";
         const string TESTIMAGE_OBFUSCATED = "FF85307A-FC09-4345-8048-78721FF0B526.GIF";
+        const int TILEWIDTHSIZE = 60;
+        const int TILEHEIGHTSIZE = 60;
 
         List<Country> Countries { get; set; }
 
@@ -296,33 +299,78 @@ namespace WebApplication1.Controllers
         [System.Web.Http.HttpGet]
         public HttpResponseMessage ImageTest()
         {
+            //Prepare some file names
             var pathOfInputGif = System.Web.Hosting.HostingEnvironment.MapPath("~/App_Data/TestImages/" + TESTIMAGE_OBFUSCATED);
-            //
-            var infoOnInputGif = new ImageMagick.MagickImageInfo(pathOfInputGif);
-            //
-            System.Diagnostics.Debug.WriteLine(infoOnInputGif.Width);
-            System.Diagnostics.Debug.WriteLine(infoOnInputGif.Height);
-            System.Diagnostics.Debug.WriteLine(infoOnInputGif.ColorSpace);
-            System.Diagnostics.Debug.WriteLine(infoOnInputGif.Format);
-            System.Diagnostics.Debug.WriteLine(infoOnInputGif.Density.X);
-            System.Diagnostics.Debug.WriteLine(infoOnInputGif.Density.Y);
-            System.Diagnostics.Debug.WriteLine(infoOnInputGif.Density.Units);
-            //
+            string pathToTemp = Path.GetTempPath();
             string nameOfOutputGif = "TEMP-TEST-OUTPUT-" + System.Guid.NewGuid().ToString().ToUpper() + "-ORIGINAL-NAME-STARTS-" + TESTIMAGE_OBFUSCATED;
-            string pathOfOutputGif = Path.Combine(Path.GetTempPath(), nameOfOutputGif);
-                
-               // IO.Path(System.IO.GetTempPath() 
+            string pathOfOutputGif = Path.Combine(pathToTemp, nameOfOutputGif);
+            string guidForOutputTileGif = System.Guid.NewGuid().ToString();
+            string nameOfGifForOutputTileGif = "TEMP-TEST-TILE-OUTPUT-{0}-{1}-{2}";
+            string nameOfGifForOutputCompositeGif = "TEMP-TEST-COMPOSITE-OUTPUT-{0}-" + System.Guid.NewGuid() + "-{1}";
             //
-            System.Diagnostics.Debug.WriteLine(String.Format("About to write copy of {0} to {1}", pathOfInputGif, pathOfOutputGif));
+            //Write meta data of input file to console
             //
-            using (var image = new ImageMagick.MagickImage(pathOfInputGif))
+            this.dumpMetaInfoToConsole(pathOfInputGif);
+            //
+            //Write copy of input file to new location
+            //
+            using (var image = new MagickImage(pathOfInputGif))
             {
+                ql(String.Format("About to write copy of {0} to {1}", pathOfInputGif, pathOfOutputGif));
                 image.Crop(100, 100);
-                // Save frame as jpg
+                // Save copy of input file to disk
                 image.Write(pathOfOutputGif);
             }
-
+            //
+            //Write multiple tiles taken from input file to 
+            //multiple output files
+            ql(String.Format("About to start making files from tiles. Tile width : {0} and tile height : {1}.", TILEWIDTHSIZE, TILEHEIGHTSIZE));
+            using (var image = new MagickImage(pathOfInputGif))
+            {
+                int i = 1;
+                foreach (MagickImage tile in image.CropToTiles(TILEWIDTHSIZE, TILEHEIGHTSIZE))
+                {
+                    string pathTileImageOut = Path.Combine(pathToTemp, String.Format(nameOfGifForOutputTileGif, i.ToString("D5"), guidForOutputTileGif, TESTIMAGE_OBFUSCATED));
+                    tile.Write(pathTileImageOut);
+                    i++;
+                }
+            }
+            //Write multiple tiles taken from input file to 
+            //a single output file 
+            ql(String.Format("About to start writing multiple tiles to a single file. Tile width : {0} and tile height : {1}.", TILEWIDTHSIZE, TILEHEIGHTSIZE));
+            using (var image = new MagickImage(pathOfInputGif))
+            {
+                IEnumerable<IMagickImage<byte>> enumerableTiles = image.CropToTiles(TILEWIDTHSIZE, TILEHEIGHTSIZE);
+                List<IMagickImage<byte>> lstTiles = enumerableTiles.ToList<IMagickImage<byte>>();
+                //
+                string pathCompositeImageOut = Path.Combine(pathToTemp, String.Format(nameOfGifForOutputCompositeGif, 99999.ToString("D5"), TESTIMAGE_OBFUSCATED));
+                ql(String.Format("Composite output at {0}", pathCompositeImageOut));
+                //var imageout = new MagickImage();
+                var imageout = new MagickImage(MagickColors.Red, image.Width, image.Height);
+                imageout.Composite(lstTiles[4], 20, 20);
+                imageout.Composite(lstTiles[8], 100, 100);
+                imageout.Write(pathCompositeImageOut);
+                // 
+                ql(String.Format("Tile count = {0}", lstTiles.Count));
+            }
             return Request.CreateResponse((HttpStatusCode)200, "OK");
+        }
+        private void dumpMetaInfoToConsole(string pathOfInputGif)
+        {
+            var infoOnInputGif = new MagickImageInfo(pathOfInputGif);
+            ql(infoOnInputGif.Width);
+            ql(infoOnInputGif.Height);
+            ql(infoOnInputGif.ColorSpace);
+            ql(infoOnInputGif.Format);
+            ql(infoOnInputGif.Density.X);
+            ql(infoOnInputGif.Density.Y);
+            ql(infoOnInputGif.Density.Units);
+        }
+        /// <summary>'ql' stands for 'quick log'</summary>
+        /// <param name="s">The string to be written to the console</param>
+        private void ql(object s)
+        {
+            System.Diagnostics.Debug.WriteLine(s.ToString());
         }
     }
 }
