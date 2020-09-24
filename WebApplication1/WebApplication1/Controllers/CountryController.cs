@@ -317,6 +317,7 @@ namespace WebApplication1.Controllers
             //
             using (var image = new ImageMagick.MagickImage(pathOfInputGif))
             {
+                image.Crop(100, 100);
                 // Save frame as jpg
                 image.Write(pathOfOutputGif);
             }
