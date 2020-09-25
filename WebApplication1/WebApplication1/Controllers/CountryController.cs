@@ -29,6 +29,11 @@ namespace WebApplication1.Controllers
 
         const bool INDIAGNOSTICMODE = true;
 
+        enum ObfuscationMode
+        {
+            OBFUSCATE,
+            DEOBFUSCATE
+        }
         List<Country> Countries { get; set; }
 
         // GET: api/country
@@ -70,7 +75,17 @@ namespace WebApplication1.Controllers
             //
             this.writeAFewTilesToOutputFile(pathOfInputGif);
             //
-            this.deObfuscateImage(pathOfInputGif);
+            string strGuid = System.Guid.NewGuid().ToString();
+            ql(String.Format("About to Deobfuscate the original input. Guid is {0}", strGuid));
+            string pathCompositeImageOutPostRotate = this.deObfuscateImage(ObfuscationMode.DEOBFUSCATE, pathOfInputGif, strGuid);
+            //Now reverse it
+            ql(String.Format("About to Reobfuscate the deobfuscated input. Guid is {0}", strGuid));
+            string pathCompositeImageOutReobfuscate = this.deObfuscateImage(ObfuscationMode.OBFUSCATE, pathCompositeImageOutPostRotate, strGuid);
+            //Now deobfuscate again
+            strGuid = System.Guid.NewGuid().ToString();
+            ql(String.Format("About to Reobfuscate the Deobfuscate. Guid is {0}", strGuid));
+            string pathCompositeImageOutDeobfuscateAgain = this.deObfuscateImage(ObfuscationMode.DEOBFUSCATE, pathCompositeImageOutReobfuscate, strGuid);
+            //
             //
             return Request.CreateResponse((HttpStatusCode)200, "OK");
         }
@@ -92,18 +107,38 @@ namespace WebApplication1.Controllers
         /// 
         /// </summary>
         /// <param name="pathOfInputGif">The path of input GIF.</param>
-        private void deObfuscateImage(string pathOfInputGif)
+        private string deObfuscateImage(ObfuscationMode obfMode, string pathOfInputGif)
+        {
+            return this.deObfuscateImage(obfMode, pathOfInputGif, System.Guid.NewGuid().ToString());
+        }
+        private string deObfuscateImage(ObfuscationMode obfMode, string pathOfInputGif, string strGuid)
         {
             string pathToTemp = Path.GetTempPath();
-            string nameOfGifForOutputCompositeGif = "TEMP-TEST-COMPOSITE-OUTPUT-{0}-{1}-" + System.Guid.NewGuid() + "-{2}";
-            string pathCompositeImageOutPreRotate = Path.Combine(pathToTemp, String.Format(nameOfGifForOutputCompositeGif, "PRE-ROTATE", 88888.ToString("D5"), TESTIMAGE_OBFUSCATED));
-            string pathCompositeImageOutPostRotate = Path.Combine(pathToTemp, String.Format(nameOfGifForOutputCompositeGif, "POST-ROTATE", 77777.ToString("D5"), TESTIMAGE_OBFUSCATED));
+            string nameOfGifForOutputCompositeGif;
             int pixelYDestination;
             int pixelXDestination;
+            DateTimeOffset now = DateTimeOffset.UtcNow;
+            string strUtcTicks = now.UtcTicks.ToString();
+            string iso = DateTime.UtcNow.ToString("yyyy.MM.ddTHH.mm.ss.fffff");
+            if (obfMode == ObfuscationMode.DEOBFUSCATE)
+            {
+                nameOfGifForOutputCompositeGif = "{0}-TEMP-TEST-COMPOSITE-DEOBFUSCATE-OUTPUT-{1}-" + strGuid + "-{2}";
+            }
+            else
+            {
+                nameOfGifForOutputCompositeGif = "{0}-TEMP-TEST-COMPOSITE-OBFUSCATE-OUTPUT-{1}-" + strGuid + "-{2}";
+
+            }
+            string pathCompositeImageOutPreRotate = Path.Combine(pathToTemp, String.Format(nameOfGifForOutputCompositeGif, iso, "A-PRE-ROTATE", TESTIMAGE_OBFUSCATED));
+            string pathCompositeImageOutPostRotate = Path.Combine(pathToTemp, String.Format(nameOfGifForOutputCompositeGif, iso, "B-PST-ROTATE", TESTIMAGE_OBFUSCATED));
 
             ql(String.Format("Starting deObfuscateImage - about to start writing multiple tiles to a single file. Tile width : {0} and tile height : {1}.", SMALLTILEWIDTH, SMALLTILEHEIGHT));
             using (var image = new MagickImage(pathOfInputGif))
             {
+                if (obfMode == ObfuscationMode.OBFUSCATE)
+                {
+                    image.Rotate(180);
+                }
                 int tilesHigh = image.Height / SMALLTILEHEIGHT;
                 int tilesWide = image.Width / SMALLTILEWIDTH;
                 int tileIndex = 0;
@@ -134,10 +169,17 @@ namespace WebApplication1.Controllers
                         tileIndex++;
                     }
                 }
+
                 imageout.Write(pathCompositeImageOutPreRotate);
-                imageout.Rotate(180);
+
+                if (obfMode == ObfuscationMode.DEOBFUSCATE)
+                {
+                    imageout.Rotate(180);
+                }
                 imageout.Write(pathCompositeImageOutPostRotate);
             }
+            //return Path.GetFileName(pathCompositeImageOutPostRotate).ToString();
+            return pathCompositeImageOutPostRotate;
         }
         private void dumpMetaInfoToConsole(string pathOfInputGif)
         {
